@@ -16,17 +16,32 @@ def play_cue_async():
 
     def _play():
         import sys
-        theme = config.get("sound_theme", "tink").lower()
+        from pathlib import Path
+        theme = config.get("sound_theme", "codex-notification").lower()
         
+        # 寻找 codex-notification.wav 路径
+        codex_candidates = [
+            Path(__file__).resolve().parent.parent / "assets" / "sounds" / "codex-notification.wav",
+            Path.home() / "Library/Sounds/codex-notification.wav",
+            Path("/Applications/AntiEnter.app/Contents/Resources/sounds/codex-notification.wav"),
+            Path("/Applications/ChatGPT.app/Contents/Resources/codex-notification.wav"),
+        ]
+        codex_path = next((str(p) for p in codex_candidates if p.exists()), None)
+
         if sys.platform == "win32":
             try:
                 import winsound
-                # Windows 音效映射
+                if theme in ("codex", "codex-notification") and codex_path and os.path.exists(codex_path):
+                    winsound.PlaySound(codex_path, winsound.SND_FILENAME | winsound.SND_ASYNC)
+                    return
+                # Windows 兜底音效映射
                 win_map = {
                     "tink": winsound.MB_ICONASTERISK,
                     "pop": winsound.MB_OK,
                     "ping": winsound.MB_ICONEXCLAMATION,
-                    "glass": winsound.MB_ICONHAND
+                    "glass": winsound.MB_ICONHAND,
+                    "hero": winsound.MB_ICONASTERISK,
+                    "sosumi": winsound.MB_ICONEXCLAMATION,
                 }
                 winsound.MessageBeep(win_map.get(theme, winsound.MB_ICONASTERISK))
             except Exception:
@@ -34,10 +49,10 @@ def play_cue_async():
             return
 
         # macOS / Unix 音效映射
-        if theme == "antigravity":
+        if theme in ("codex", "codex-notification") and codex_path and os.path.exists(codex_path):
             try:
                 subprocess.run(
-                    ["/usr/bin/osascript", "-e", "beep"],
+                    ["/usr/bin/afplay", codex_path],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     timeout=2,
@@ -53,9 +68,9 @@ def play_cue_async():
             "glass": "/System/Library/Sounds/Glass.aiff",
             "hero": "/System/Library/Sounds/Hero.aiff",
             "sosumi": "/System/Library/Sounds/Sosumi.aiff",
-            "antigravity": "/System/Library/Sounds/Tink.aiff"
+            "codex-notification": codex_path or "/System/Library/Sounds/Tink.aiff"
         }
-        sound_file = mac_map.get(theme, mac_map["tink"])
+        sound_file = mac_map.get(theme, mac_map["codex-notification"])
         
         if os.path.exists(sound_file):
             try:

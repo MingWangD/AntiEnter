@@ -57,6 +57,8 @@ cp src/sound.py "$RESOURCES/scripts/"
 cp src/cli_runner.py "$RESOURCES/scripts/"
 cp src/*.py "$RESOURCES/scripts/src/"
 cp hooks/hooks.json "$RESOURCES/"
+mkdir -p "$RESOURCES/sounds"
+cp -R assets/sounds/* "$RESOURCES/sounds/" 2>/dev/null || true
 chmod +x "$RESOURCES/scripts/hook_handler.py"
 chmod +x "$RESOURCES/scripts/src/hook_handler.py"
 

@@ -11,7 +11,7 @@ class AppState {
     var isEnabled: Bool = true
     var bufferDelay: Double = 1.0
     var playSound: Bool = true
-    var soundTheme: String = "antigravity"
+    var soundTheme: String = "codex-notification"
     var safetyFuseEnabled: Bool = true
     
     var lastTriggerTime: TimeInterval = 0
@@ -83,9 +83,25 @@ class AppState {
     
     func playCueSound() {
         guard playSound else { return }
-        if soundTheme == "antigravity" {
-            NSSound.beep()
-            return
+        if soundTheme == "codex-notification" || soundTheme == "codex" {
+            var candidates: [String] = []
+            if let resURL = Bundle.main.resourceURL {
+                candidates.append(resURL.appendingPathComponent("sounds/codex-notification.wav").path)
+            }
+            let home = FileManager.default.homeDirectoryForCurrentUser
+            candidates.append(home.appendingPathComponent("Library/Sounds/codex-notification.wav").path)
+            candidates.append("/Applications/AntiEnter.app/Contents/Resources/sounds/codex-notification.wav")
+            candidates.append("/Applications/ChatGPT.app/Contents/Resources/codex-notification.wav")
+            candidates.append("/Users/myw/Desktop/AntiEnter/assets/sounds/codex-notification.wav")
+            
+            for path in candidates {
+                if FileManager.default.fileExists(atPath: path) {
+                    if let sound = NSSound(contentsOfFile: path, byReference: true) {
+                        sound.play()
+                        return
+                    }
+                }
+            }
         }
         
         let soundPath: String
@@ -531,7 +547,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // 音效选择子菜单
         let soundMenu = NSMenu()
         let themes = [
-            ("antigravity", "Antigravity 原声 (系统原生提示音 - 默认)"),
+            ("codex-notification", "Codex 提示音 (codex-notification - 默认)"),
             ("tink", "清脆音 (Tink)"),
             ("pop", "水滴音 (Pop)"),
             ("ping", "高音提示 (Ping)"),

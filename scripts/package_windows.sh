@@ -18,6 +18,8 @@ cp LICENSE "$WIN_DIST/"
 cp bin/antienter.bat "$WIN_DIST/bin/"
 cp hooks/hooks.json "$WIN_DIST/hooks/"
 cp src/*.py "$WIN_DIST/src/"
+mkdir -p "$WIN_DIST/assets/sounds"
+cp -R assets/sounds/* "$WIN_DIST/assets/sounds/" 2>/dev/null || true
 
 cd dist
 zip -r "AntiEnter-v${VERSION}-windows.zip" "AntiEnter-Windows" >/dev/null

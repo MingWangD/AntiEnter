@@ -12,8 +12,8 @@ DEFAULT_CONFIG = {
     "buffer_delay": 1.0,
     # 触发自动回车时是否播放系统提示音
     "play_sound": True,
-    # 提示音主题：可选 "antigravity" (系统原声), "tink", "pop", "ping", "glass", "hero", "sosumi"
-    "sound_theme": "antigravity",
+    # 提示音主题：可选 "codex-notification" (默认), "tink", "pop", "ping", "glass", "hero", "sosumi"
+    "sound_theme": "codex-notification",
     # 高危指令熔断黑名单：匹配到这些模式时不自动放行，保留人工弹窗审批
     "safety_fuse_enabled": True,
     "dangerous_patterns": [
