@@ -8,6 +8,7 @@ AntiEnter 协议层 PreToolUse Hook 处理器
 import sys
 import os
 import json
+import posixpath
 import time
 import re
 import uuid
@@ -104,15 +105,13 @@ def is_dangerous(tool_name: str, args: dict, config: dict) -> tuple[bool, str]:
             return True, "TargetFile 参数缺失或类型异常"
 
         target_file = target_file.strip()
-        # 路径解析规范化（处理 .. 与符号链接）
-        try:
-            resolved_path = os.path.realpath(os.path.expanduser(target_file))
-        except Exception:
-            resolved_path = target_file
-
-        norm_file = resolved_path.lower().replace("/", "\\")
-
-        # Unix 保护目录
+        # 按 POSIX 语义先规范化原始输入，保证 Windows 运行时也能识别
+        # `/etc/...` 与 `../../../../etc/...` 这类 Unix 系统路径。
+        # Windows 的 os.path.realpath() 会把它们转换成当前盘符路径，
+        # 从而绕过 Unix 保护目录检查。
+        posix_candidate = posixpath.normpath(
+            "/" + target_file.replace("\\", "/").lstrip("/")
+        )
         unix_protected = (
             "/etc",
             "/bin",
@@ -124,6 +123,21 @@ def is_dangerous(tool_name: str, args: dict, config: dict) -> tuple[bool, str]:
             "/private/var",
             "/dev",
         )
+        if any(
+            posix_candidate == p or posix_candidate.startswith(p + "/")
+            for p in unix_protected
+        ):
+            return True, f"目标路径触及系统保护目录: '{target_file}'"
+
+        # 路径解析规范化（处理 .. 与符号链接）
+        try:
+            resolved_path = os.path.realpath(os.path.expanduser(target_file))
+        except Exception:
+            resolved_path = target_file
+
+        norm_file = resolved_path.lower().replace("/", "\\")
+
+        # Unix 保护目录（处理当前平台上的真实路径与符号链接）
         if any(resolved_path == p or resolved_path.startswith(p + "/") for p in unix_protected):
             return True, f"目标路径触及系统保护目录: '{resolved_path}'"
 
