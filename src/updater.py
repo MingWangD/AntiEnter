@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-CURRENT_VERSION = "1.2.0"
+CURRENT_VERSION = "1.2.3"
 GITHUB_REPO = "MingWangD/AntiEnter"
 
 

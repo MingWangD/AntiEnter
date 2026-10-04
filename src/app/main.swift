@@ -5,7 +5,9 @@ import ApplicationServices
 class AppState {
     static let shared = AppState()
     
-    let version: String = "1.2.0"
+    var version: String {
+        return (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "1.2.3"
+    }
     var isEnabled: Bool = true
     var bufferDelay: Double = 1.0
     var playSound: Bool = true
@@ -257,12 +259,25 @@ class UpdateService {
             let scriptPath = "/tmp/antienter_restart.sh"
             let scriptContent = """
             #!/bin/bash
-            sleep 1
+            exec > /tmp/antienter_update.log 2>&1
+            echo "[AntiEnter Update] 升级置换进程启动..."
+            # 等待旧进程完全退出
+            for i in {1..30}; do
+                if ! pgrep -x "AntiEnter" >/dev/null; then
+                    echo "[AntiEnter Update] 旧版进程已完全退出。"
+                    break
+                fi
+                sleep 0.2
+            done
+            sleep 0.5
+            echo "[AntiEnter Update] 正在替换新版应用文件至: \(targetAppPath)"
             rm -rf "\(targetAppPath)"
             cp -R "\(extractedApp.path)" "\(targetAppPath)"
             xattr -cr "\(targetAppPath)" 2>/dev/null || true
+            echo "[AntiEnter Update] 重新拉起新版应用..."
             open "\(targetAppPath)"
-            rm -rf /tmp/AntiEnter_Update.zip /tmp/AntiEnter_Update_Dir /tmp/antienter_restart.sh
+            rm -rf /tmp/AntiEnter_Update.zip /tmp/AntiEnter_Update_Dir
+            echo "[AntiEnter Update] 升级完成。"
             """
             try? scriptContent.write(toFile: scriptPath, atomically: true, encoding: .utf8)
             
@@ -272,13 +287,15 @@ class UpdateService {
             try? chmodProc.run()
             chmodProc.waitUntilExit()
             
-            let relaunchProc = Process()
-            relaunchProc.executableURL = URL(fileURLWithPath: "/bin/bash")
-            relaunchProc.arguments = [scriptPath]
-            try? relaunchProc.run()
+            // 使用 osascript 独立后台拉起，彻底脱离父进程生命周期
+            let osaProc = Process()
+            osaProc.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            osaProc.arguments = ["-e", "do shell script \"/bin/bash /tmp/antienter_restart.sh > /dev/null 2>&1 &\""]
+            try? osaProc.run()
+            osaProc.waitUntilExit()
             
             DispatchQueue.main.async {
-                AppState.shared.log("自动更新至 \(version) 成功，正在重启...")
+                AppState.shared.log("自动更新至 \(version) 成功，已分离升级进程，正在退出旧版...")
                 NSApplication.shared.terminate(nil)
             }
         }

@@ -62,7 +62,7 @@ chmod +x "$RESOURCES/scripts/src/hook_handler.py"
 
 # 4. 写入 Info.plist 与 PkgInfo
 echo "[4/5] 写入 macOS Bundle 元数据 (Info.plist)..."
-cat << 'EOF' > "$CONTENTS/Info.plist"
+cat << EOF > "$CONTENTS/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
