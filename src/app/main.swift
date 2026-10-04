@@ -9,7 +9,7 @@ class AppState {
     var isEnabled: Bool = true
     var bufferDelay: Double = 1.0
     var playSound: Bool = true
-    var soundTheme: String = "tink"
+    var soundTheme: String = "antigravity"
     var safetyFuseEnabled: Bool = true
     
     var lastTriggerTime: TimeInterval = 0
@@ -29,10 +29,24 @@ class AppState {
         "Alacritty"
     ]
     
-    // 精准匹配确认授权弹窗关键词，排除 IDE 常驻按钮 (如 Run/Submit/Continue)
+    // 授权审批弹窗特征关键词（支持单选选项、标题、Skip与确认按钮）
     let confirmKeywords: [String] = [
-        "Submit ↵", "Yes, allow this time", "Yes, and always allow", "Always allow",
-        "Allow this time", "Proceed", "Confirm", "确定", "允许", "好"
+        "Yes, allow this time",
+        "Allow this time",
+        "Yes, and always allow",
+        "Always allow",
+        "Allow pushing",
+        "Allow searching",
+        "Allow running",
+        "Allow editing",
+        "Allow writing",
+        "Skip",
+        "Submit ↵",
+        "Proceed",
+        "Confirm",
+        "确定",
+        "允许",
+        "好"
     ]
     
     var configDir: URL {
@@ -67,11 +81,18 @@ class AppState {
     
     func playCueSound() {
         guard playSound else { return }
+        if soundTheme == "antigravity" {
+            NSSound.beep()
+            return
+        }
+        
         let soundPath: String
         switch soundTheme {
         case "pop": soundPath = "/System/Library/Sounds/Pop.aiff"
         case "ping": soundPath = "/System/Library/Sounds/Ping.aiff"
         case "glass": soundPath = "/System/Library/Sounds/Glass.aiff"
+        case "hero": soundPath = "/System/Library/Sounds/Hero.aiff"
+        case "sosumi": soundPath = "/System/Library/Sounds/Sosumi.aiff"
         default: soundPath = "/System/Library/Sounds/Tink.aiff"
         }
         
@@ -300,16 +321,18 @@ class AccessibilityService {
             if role == (kAXSheetRole as String) || role == (kAXDrawerRole as String) {
                 return true
             }
-            
-            if role == (kAXButtonRole as String) {
-                var titleRef: CFTypeRef?
-                if AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleRef) == .success,
-                   let title = titleRef as? String {
-                    let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-                    for kw in AppState.shared.confirmKeywords {
-                        if trimmed.caseInsensitiveCompare(kw) == .orderedSame || trimmed.contains(kw) {
-                            return true
-                        }
+        }
+        
+        // 检查 Title, Description, Value 是否包含确认弹窗特征（覆盖按钮、单选框、文本、窗口头）
+        let attrs = [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute]
+        for attr in attrs {
+            var valRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, attr as CFString, &valRef) == .success,
+               let valStr = valRef as? String {
+                let trimmed = valStr.trimmingCharacters(in: .whitespacesAndNewlines)
+                for kw in AppState.shared.confirmKeywords {
+                    if trimmed.localizedCaseInsensitiveContains(kw) {
+                        return true
                     }
                 }
             }
@@ -491,10 +514,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // 音效选择子菜单
         let soundMenu = NSMenu()
         let themes = [
-            ("tink", "清脆音 (Tink - 默认)"),
+            ("antigravity", "Antigravity 原声 (系统原生提示音 - 默认)"),
+            ("tink", "清脆音 (Tink)"),
             ("pop", "水滴音 (Pop)"),
             ("ping", "高音提示 (Ping)"),
-            ("glass", "玻璃碰撞音 (Glass)")
+            ("glass", "玻璃碰撞音 (Glass)"),
+            ("hero", "经典凯旋音 (Hero)"),
+            ("sosumi", "经典警报音 (Sosumi)")
         ]
         for (th, title) in themes {
             let item = NSMenuItem(title: title, action: #selector(selectSoundTheme(_:)), keyEquivalent: "")

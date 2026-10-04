@@ -20,11 +20,17 @@ struct Config {
         "Alacritty"
     ]
     static var confirmButtonKeywords: [String] = [
-        "Submit ↵",
         "Yes, allow this time",
+        "Allow this time",
         "Yes, and always allow",
         "Always allow",
-        "Allow this time",
+        "Allow searching",
+        "Allow pushing",
+        "Allow running",
+        "Allow editing",
+        "Allow writing",
+        "Skip",
+        "Submit ↵",
         "Proceed",
         "Confirm",
         "确定",
@@ -100,17 +106,18 @@ class AccessibilityChecker {
             if role == (kAXSheetRole as String) || role == (kAXDrawerRole as String) {
                 return true
             }
-            
-            // 如果是按钮，检查标题
-            if role == (kAXButtonRole as String) {
-                var titleRef: CFTypeRef?
-                if AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleRef) == .success,
-                   let title = titleRef as? String {
-                    let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-                    for keyword in Config.confirmButtonKeywords {
-                        if trimmed.caseInsensitiveCompare(keyword) == .orderedSame || trimmed.contains(keyword) {
-                            return true
-                        }
+        }
+        
+        // 检查 Title, Description, Value 是否包含弹窗特征
+        let attrs = [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute]
+        for attr in attrs {
+            var valRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, attr as CFString, &valRef) == .success,
+               let valStr = valRef as? String {
+                let trimmed = valStr.trimmingCharacters(in: .whitespacesAndNewlines)
+                for kw in Config.confirmButtonKeywords {
+                    if trimmed.localizedCaseInsensitiveContains(kw) {
+                        return true
                     }
                 }
             }

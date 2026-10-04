@@ -34,11 +34,26 @@ def play_cue_async():
             return
 
         # macOS / Unix 音效映射
+        if theme == "antigravity":
+            try:
+                subprocess.run(
+                    ["/usr/bin/osascript", "-e", "beep"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=2,
+                )
+                return
+            except Exception:
+                pass
+
         mac_map = {
             "tink": "/System/Library/Sounds/Tink.aiff",
             "pop": "/System/Library/Sounds/Pop.aiff",
             "ping": "/System/Library/Sounds/Ping.aiff",
-            "glass": "/System/Library/Sounds/Glass.aiff"
+            "glass": "/System/Library/Sounds/Glass.aiff",
+            "hero": "/System/Library/Sounds/Hero.aiff",
+            "sosumi": "/System/Library/Sounds/Sosumi.aiff",
+            "antigravity": "/System/Library/Sounds/Tink.aiff"
         }
         sound_file = mac_map.get(theme, mac_map["tink"])
         
