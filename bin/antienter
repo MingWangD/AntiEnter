@@ -1,0 +1,9 @@
+#!/bin/sh
+# AntiEnter CLI executable
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -x "/usr/bin/python3" ]; then
+    PY="/usr/bin/python3"
+else
+    PY="python3"
+fi
+exec "$PY" "$DIR/src/main.py" "$@"

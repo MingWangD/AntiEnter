@@ -1,0 +1,17 @@
+{
+  "antienter-auto-approver": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/myw/Desktop/AntiEnter/src/hook_handler.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

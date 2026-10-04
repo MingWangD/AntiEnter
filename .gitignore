@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Build caches & runtime
+.cache/
+.antienter_runtime/
+bin/antienter-daemon
+
+# Dist outputs (except release archives if needed)
+dist/AntiEnter.app/
