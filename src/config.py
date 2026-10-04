@@ -17,9 +17,13 @@ DEFAULT_CONFIG = {
     # 高危指令熔断黑名单：匹配到这些模式时不自动放行，保留人工弹窗审批
     "safety_fuse_enabled": True,
     "dangerous_patterns": [
-        "rm -rf /",
-        "rm -rf ~",
-        "rm -rf *",
+        "rm -rf",
+        "rm -r",
+        "rm -f",
+        "rm ",
+        "rmdir",
+        "git reset --hard",
+        "git clean -f",
         "mkfs",
         "dd if=",
         ":(){ :|:& };:",
@@ -28,6 +32,7 @@ DEFAULT_CONFIG = {
         "shutdown",
         "reboot",
         "init 0",
+        "kill -9 -1",
     ],
     # 桌面端受支持的进程/应用名称与 Bundle ID 关键词
     "desktop_targets": [

@@ -97,10 +97,55 @@ def test_system_file_write_blocked():
     print("  ✓ 系统关键目录写保护拦截测试通过 (/etc/hosts -> ask)")
 
 
+def test_rm_rf_any_directory_blocked():
+    """测试任意目录的 rm -rf 均被安全熔断拦截"""
+    payload = {
+        "toolCall": {
+            "name": "run_command",
+            "args": {"CommandLine": "rm -rf ./build/dist"},
+        },
+        "stepIdx": 6,
+    }
+    result = run_handler_with_payload(payload)
+    assert result.get("decision") == "ask", f"rm -rf 目录应当保留人工确认，实际输出: {result}"
+    print("  ✓ 目录删除拦截测试通过 (rm -rf ./build/dist -> ask)")
+
+
+def test_rm_file_blocked():
+    """测试单文件删除 rm 同样被安全熔断拦截"""
+    payload = {
+        "toolCall": {
+            "name": "run_command",
+            "args": {"CommandLine": "rm important_data.json"},
+        },
+        "stepIdx": 7,
+    }
+    result = run_handler_with_payload(payload)
+    assert result.get("decision") == "ask", f"rm 文件应当保留人工确认，实际输出: {result}"
+    print("  ✓ 文件删除拦截测试通过 (rm important_data.json -> ask)")
+
+
+def test_git_push_allowed():
+    """测试 git push 等非破坏性指令自动放行"""
+    payload = {
+        "toolCall": {
+            "name": "run_command",
+            "args": {"CommandLine": "git push -u origin main --tags"},
+        },
+        "stepIdx": 8,
+    }
+    result = run_handler_with_payload(payload)
+    assert result.get("decision") == "allow", f"git push 应当自动放行，实际输出: {result}"
+    print("  ✓ 非破坏性指令放行测试通过 (git push -> allow)")
+
+
 def run_all_tests():
     print("======== 开始执行 AntiEnter 核心逻辑自测试 ========")
     test_safe_command_allowed()
     test_dangerous_command_blocked()
+    test_rm_rf_any_directory_blocked()
+    test_rm_file_blocked()
+    test_git_push_allowed()
     test_forkbomb_blocked()
     test_safe_file_write_allowed()
     test_system_file_write_blocked()

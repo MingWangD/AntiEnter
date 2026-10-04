@@ -9,6 +9,7 @@ import sys
 import os
 import json
 import time
+import re
 from pathlib import Path
 from typing import Tuple
 
@@ -33,24 +34,42 @@ def log_decision(decision: str, tool_name: str, detail: str):
 
 
 def is_dangerous(tool_name: str, args: dict, config: dict) -> tuple[bool, str]:
-    """检查是否命中高危指令黑名单"""
+    """检查是否命中高危指令黑名单（删除文件、破坏性操作）"""
     if not config.get("safety_fuse_enabled", True):
         return False, ""
 
-    dangerous_patterns = config.get("dangerous_patterns", [])
-
     # 1. 检查 run_command
     if tool_name == "run_command":
-        cmd = args.get("CommandLine", "")
-        for pattern in dangerous_patterns:
+        cmd = args.get("CommandLine", "").strip()
+        
+        # 关键词与正则表达式双重校验
+        deletion_patterns = [
+            r"\brm\s+",
+            r"\brmdir\b",
+            r"\btrash\b",
+            r"\bgit\s+reset\s+--hard\b",
+            r"\bgit\s+clean\s+-[a-zA-Z0-9_-]*f",
+            r"\bmkfs\b",
+            r"\bdd\s+if=",
+            r":\(\)\s*\{\s*:\|:&\s*\};:",
+            r"\b(shutdown|reboot|init\s+0)\b",
+            r"\bkill\s+-9\s+-1\b",
+            r"\b(drop|truncate)\s+(database|table)\b",
+        ]
+        for pat in deletion_patterns:
+            if re.search(pat, cmd, re.IGNORECASE):
+                return True, f"命令行命中高危操作规则: '{pat}' (cmd: {cmd})"
+
+        # 检查常规关键词列表
+        for pattern in config.get("dangerous_patterns", []):
             if pattern in cmd:
-                return True, f"命令行匹配高危规则: '{pattern}' (cmd: {cmd})"
+                return True, f"命令行包含高危模式: '{pattern}' (cmd: {cmd})"
 
     # 2. 检查危险的写操作（如覆盖敏感系统文件）
     if tool_name in ("write_to_file", "replace_file_content"):
         target_file = args.get("TargetFile", "")
         # 禁止覆写系统关键配置
-        if target_file.startswith(("/etc", "/bin", "/sbin", "/usr/bin", "/System")):
+        if target_file.startswith(("/etc", "/bin", "/sbin", "/usr/bin", "/System", "/Library")):
             return True, f"目标路径触及系统保护目录: '{target_file}'"
 
     return False, ""
