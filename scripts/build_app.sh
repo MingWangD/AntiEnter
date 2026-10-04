@@ -49,12 +49,15 @@ echo "  ✓ 二进制生成完成: $MACOS/AntiEnter"
 
 # 3. 复制依赖脚本与模板
 echo "[3/5] 打包嵌入 Python 脚本与配置模板..."
+mkdir -p "$RESOURCES/scripts/src"
 cp src/hook_handler.py "$RESOURCES/scripts/"
 cp src/config.py "$RESOURCES/scripts/"
 cp src/sound.py "$RESOURCES/scripts/"
 cp src/cli_runner.py "$RESOURCES/scripts/"
+cp src/*.py "$RESOURCES/scripts/src/"
 cp hooks/hooks.json "$RESOURCES/"
 chmod +x "$RESOURCES/scripts/hook_handler.py"
+chmod +x "$RESOURCES/scripts/src/hook_handler.py"
 
 # 4. 写入 Info.plist 与 PkgInfo
 echo "[4/5] 写入 macOS Bundle 元数据 (Info.plist)..."

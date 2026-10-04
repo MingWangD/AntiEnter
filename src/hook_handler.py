@@ -13,10 +13,18 @@ import re
 from pathlib import Path
 from typing import Tuple
 
-# 确保同目录导入
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from src.config import load_config
-from src.sound import play_cue_async
+# 确保同目录与包导入均兼容（支持源码与 App Bundle 两种运行环境）
+_current_dir = Path(__file__).resolve().parent
+sys.path.insert(0, str(_current_dir))
+sys.path.insert(0, str(_current_dir.parent))
+sys.path.insert(0, str(_current_dir.parent.parent))
+
+try:
+    from src.config import load_config
+    from src.sound import play_cue_async
+except ImportError:
+    from config import load_config
+    from sound import play_cue_async
 
 
 def log_decision(decision: str, tool_name: str, detail: str):

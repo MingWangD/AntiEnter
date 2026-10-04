@@ -145,10 +145,16 @@ class HookManager {
         let configDir = hooksURL.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
         
-        // 获取安装脚本或 bundle 脚本路径
-        let handlerPath = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/scripts/hook_handler.py").path
-        let fallbackPath = "/Users/myw/Desktop/AntiEnter/src/hook_handler.py"
-        let chosenPath = FileManager.default.fileExists(atPath: handlerPath) ? handlerPath : fallbackPath
+        // 优先使用标准安装目录或工作区固定路径，避免 AppTranslocation 临时随机路径
+        var chosenPath = "/Applications/AntiEnter.app/Contents/Resources/scripts/hook_handler.py"
+        if !FileManager.default.fileExists(atPath: chosenPath) {
+            let workspacePath = "/Users/myw/Desktop/AntiEnter/src/hook_handler.py"
+            if FileManager.default.fileExists(atPath: workspacePath) {
+                chosenPath = workspacePath
+            } else {
+                chosenPath = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/scripts/hook_handler.py").path
+            }
+        }
         
         var hooks: [String: Any] = [:]
         if let data = try? Data(contentsOf: hooksURL),
@@ -174,7 +180,7 @@ class HookManager {
         
         if let outputData = try? JSONSerialization.data(withJSONObject: hooks, options: [.prettyPrinted]) {
             try? outputData.write(to: hooksURL)
-            AppState.shared.log("Hook 已成功安装/更新至 \(hooksURL.path)")
+            AppState.shared.log("Hook 已成功安装/更新至 \(hooksURL.path) (指向 \(chosenPath))")
         }
     }
     
@@ -205,13 +211,13 @@ class HookManager {
 }
 
 // MARK: - App Delegate & Menu Bar Controller
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var statusItem: NSStatusItem!
     var timer: Timer?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        setupStatusBar()
         HookManager.installHook()
+        setupStatusBar()
         startWatcherTimer()
         
         if !AccessibilityService.isTrusted() {
@@ -223,7 +229,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func setupStatusBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        let menu = NSMenu()
+        menu.delegate = self
+        statusItem.menu = menu
         updateStatusItemAppearance()
+        buildMenu()
+    }
+    
+    func menuWillOpen(_ menu: NSMenu) {
         buildMenu()
     }
     
@@ -238,6 +251,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func buildMenu() {
         let menu = NSMenu()
+        menu.delegate = self
         
         // 状态标题项
         let statusTitle = AppState.shared.isEnabled ? "🟢 AntiEnter: 自动回车已激活" : "🔴 AntiEnter: 已暂停"

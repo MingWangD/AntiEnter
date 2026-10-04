@@ -15,9 +15,17 @@ import time
 from pathlib import Path
 from typing import List
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from src.config import load_config
-from src.sound import play_cue_async
+_current_dir = Path(__file__).resolve().parent
+sys.path.insert(0, str(_current_dir))
+sys.path.insert(0, str(_current_dir.parent))
+sys.path.insert(0, str(_current_dir.parent.parent))
+
+try:
+    from src.config import load_config
+    from src.sound import play_cue_async
+except ImportError:
+    from config import load_config
+    from sound import play_cue_async
 
 
 def run_with_pty(cmd_args: list[str]):
