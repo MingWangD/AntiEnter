@@ -12,6 +12,7 @@ CONTENTS="$APP_BUNDLE/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
 CACHE_DIR="$DIR/.cache"
+VERSION="${1:-1.2.0}"
 
 rm -rf "$APP_BUNDLE" dist/*.zip dist/*.dmg
 mkdir -p "$MACOS" "$RESOURCES/scripts" "$CACHE_DIR"
@@ -77,7 +78,7 @@ cat << 'EOF' > "$CONTENTS/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>${VERSION}</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSMinimumSystemVersion</key>
@@ -100,11 +101,12 @@ codesign --force --deep --sign - "$APP_BUNDLE" 2>/dev/null || true
 # 5. 生成 Release 发布压缩包
 echo "[5/5] 生成 GitHub Release 发布包..."
 cd dist
-zip -r -y "AntiEnter-v1.0.0-macOS.zip" "AntiEnter.app" >/dev/null
+zip -r -y "AntiEnter-v${VERSION}-macOS.zip" "AntiEnter.app" >/dev/null
+cp "AntiEnter-v${VERSION}-macOS.zip" "AntiEnter-macOS.zip"
 cd "$DIR"
 
 echo ""
 echo "=== 构建成功！==="
 echo "应用包路径: $DIR/dist/AntiEnter.app"
-echo "发布包路径: $DIR/dist/AntiEnter-v1.0.0-macOS.zip"
+echo "发布包路径: $DIR/dist/AntiEnter-v${VERSION}-macOS.zip"
 ls -lh dist/

@@ -39,6 +39,8 @@ def main():
     p_cfg.add_argument("--fuse", choices=["on", "off"], help="开启或关闭高危指令安全熔断")
 
     subparsers.add_parser("test", help="运行功能与熔断自检")
+    p_update = subparsers.add_parser("update", help="检查并自动更新 AntiEnter 至最新版本")
+    p_update.add_argument("--cli", action="store_true", help="命令行交互模式更新（默认弹出原生对话框）")
 
     args = parser.parse_args()
 
@@ -82,6 +84,9 @@ def main():
         import subprocess
         test_file = ROOT_DIR / "tests" / "test_hook.py"
         subprocess.run(["python3", str(test_file)])
+    elif args.command == "update":
+        from src.updater import check_and_update
+        check_and_update(gui=(not args.cli))
     else:
         parser.print_help()
 

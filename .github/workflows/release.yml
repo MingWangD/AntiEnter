@@ -23,17 +23,19 @@ jobs:
 
       - name: Run Tests
         run: |
-          python3 tests/test_hook.py
+          python3 -m unittest discover tests/
 
       - name: Build macOS AntiEnter.app & Package
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
           chmod +x scripts/build_app.sh
-          ./scripts/build_app.sh
+          ./scripts/build_app.sh "$VERSION"
 
       - name: Package Windows AntiEnter.zip
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
           chmod +x scripts/package_windows.sh
-          ./scripts/package_windows.sh
+          ./scripts/package_windows.sh "$VERSION"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
