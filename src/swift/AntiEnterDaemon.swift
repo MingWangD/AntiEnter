@@ -91,7 +91,7 @@ class AccessibilityChecker {
     }
     
     private static func inspectElementForConfirmation(_ element: AXUIElement, depth: Int) -> Bool {
-        if depth > 5 { return false } // 限制递归深度以保证性能
+        if depth > 25 { return false } // 增加深度至 25，适配 Electron/Web 深度嵌套 DOM
         
         // 1. 检查当前元素角色
         var roleRef: CFTypeRef?
