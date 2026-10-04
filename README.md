@@ -3,7 +3,7 @@
 > 🚀 **让 Antigravity 拥有类似 OpenAI Codex / Claude Code 的完全自主运行体验**。  
 > 无论是桌面端 GUI 弹窗，还是终端 CLI (`agy`) 交互，遇到确认自动触发回车（默认选择推荐第 1 项），实现真正无人值守开发。
 
-[![macOS](https://img.shields.io/badge/Platform-macOS%2012%2B-blue.svg)](https://github.com)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-blue.svg)](https://github.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/badge/Release-v1.0.0-orange.svg)](https://github.com)
 
@@ -11,40 +11,48 @@
 
 ## 🌟 核心特性
 
-- **原生 macOS 菜单栏应用 (`AntiEnter.app`)**：
-  - 常驻顶部菜单栏，带状态指示图标（⚡⏎ 激活 / ⏸⏎ 暂停）。
-  - 下拉菜单可一键启停、切换延时、开关音效、管理 Antigravity 全局 Hook。
+- **跨平台全支持 (macOS + Windows)**：
+  - **macOS**：原生 Swift 菜单栏应用 (`AntiEnter.app`)，实时状态图标与下拉菜单控制。
+  - **Windows**：基于原生 Win32 API (`user32.dll` + `keybd_event`)，纯 Python 标准库驱动，提供一键批处理启动脚本 (`start_windows.bat`)。
 - **双端全支持**：
   - **桌面端 (Desktop/IDE)**：精准监控 Antigravity 窗口与界面交互，弹窗、工件 Proceed、`ask_question` 模态框自动回车确认。
-  - **终端端 (CLI / `agy`)**：协议级免密执行工具指令，并提供智能 PTY 终端交互包装器。
+  - **终端端 (CLI / `agy`)**：协议级免密执行工具指令，跨平台支持 Terminal、iTerm、CMD、PowerShell、Windows Terminal。
 - **1.0 秒安全缓冲 (Buffer Delay)**：
-  - 遇到确认操作时，提供 1.0 秒缓冲倒计时与温和音频提示音（macOS Tink/Pop 音效），留出人工视觉反馈与紧急干预余地。
+  - 遇到确认操作时，提供 1.0 秒缓冲倒计时与温和音频提示音（macOS Tink 音效 / Windows 提示蜂鸣），留出人工视觉反馈与紧急干预余地。
 - **智能安全熔断机制 (Safety Fuse)**：
   - 自动放行绝大多数常规开发命令（如代码检索、构建、测试、文件读写）。
-  - 遇极端高危指令（如 `rm -rf /`、`mkfs`、系统目录覆盖等）自动熔断，**强制保留人工弹窗审批**。
+  - 遇极端高危删除指令（如 Unix `rm -rf`、`rm`；Windows `del /s`、`rd /s`、`Remove-Item`）自动熔断，**强制保留人工弹窗审批**。
 - **双引擎融合架构**：
   - **底层协议 Hook (`PreToolUse`)**：零 UI 抢占、零延迟静默批准工具调用。
-  - **UI 原生守护进程 (`AntiEnterDaemon`)**：基于 Swift / macOS Accessibility API，无缝穿透应用层界面确认。
-- **一键极简启停**：一条命令或点击菜单栏全局激活，随时完整停用，恢复人工审核模式。
+  - **UI 原生守护进程**：无缝穿透应用层界面确认。
+- **一键极简启停**：一条命令或双击批处理全局激活，随时完整停用。
 
 ---
 
 ## 📦 安装与下载
 
-### 方式一：直接运行原生 macOS App (推荐)
+### 🪟 Windows 用户使用方式
 
-1. 前往 GitHub Releases 下载最新 `AntiEnter-v1.0.0-macOS.zip`。
+1. 前往 GitHub Releases 下载最新 [`AntiEnter-v1.0.0-windows.zip`](https://github.com/MingWangD/AntiEnter/releases/download/v1.0.0/AntiEnter-v1.0.0-windows.zip)。
+2. 解压到任意目录。
+3. 双击运行 **`start_windows.bat`** 即可一键启动后台自动回车与全局 Hook！
+4. 需恢复人工审批时，双击运行 **`stop_windows.bat`** 即可停用。
+
+> *在 CMD / PowerShell 中亦可使用命令：*
+> ```cmd
+> .\bin\antienter.bat start
+> .\bin\antienter.bat status
+> .\bin\antienter.bat stop
+> ```
+
+---
+
+### 🍎 macOS 用户使用方式
+
+1. 前往 GitHub Releases 下载最新 [`AntiEnter-v1.0.0-macOS.zip`](https://github.com/MingWangD/AntiEnter/releases/download/v1.0.0/AntiEnter-v1.0.0-macOS.zip)。
 2. 解压并将 `AntiEnter.app` 拖入 `/Applications`（或任意目录）。
 3. 双击启动，顶部菜单栏即会出现 `⚡⏎` 图标。
 4. 首次启动时若系统弹出辅助功能请求，请在 `系统设置 -> 隐私与安全性 -> 辅助功能` 勾选允许。
-
-### 方式二：命令行 CLI 使用
-
-```bash
-git clone https://github.com/<username>/AntiEnter.git
-cd AntiEnter
-./bin/antienter start
-```
 
 ---
 

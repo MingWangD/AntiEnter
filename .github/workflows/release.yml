@@ -1,4 +1,4 @@
-name: Build & Release macOS App
+name: Build & Release AntiEnter (macOS & Windows)
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-and-release:
     runs-on: macos-latest
     steps:
       - name: Checkout Code
@@ -25,16 +25,23 @@ jobs:
         run: |
           python3 tests/test_hook.py
 
-      - name: Build AntiEnter.app
+      - name: Build macOS AntiEnter.app & Package
         run: |
           chmod +x scripts/build_app.sh
           ./scripts/build_app.sh
+
+      - name: Package Windows AntiEnter.zip
+        run: |
+          chmod +x scripts/package_windows.sh
+          ./scripts/package_windows.sh
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: dist/AntiEnter-*.zip
+          files: |
+            dist/AntiEnter-*-macOS.zip
+            dist/AntiEnter-*-windows.zip
           draft: false
           prerelease: false
           generate_release_notes: true

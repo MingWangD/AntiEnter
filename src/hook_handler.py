@@ -50,8 +50,9 @@ def is_dangerous(tool_name: str, args: dict, config: dict) -> tuple[bool, str]:
     if tool_name == "run_command":
         cmd = args.get("CommandLine", "").strip()
         
-        # 关键词与正则表达式双重校验
+        # 关键词与正则表达式双重校验（macOS + Linux + Windows）
         deletion_patterns = [
+            # Unix / 通用
             r"\brm\s+",
             r"\brmdir\b",
             r"\btrash\b",
@@ -60,6 +61,13 @@ def is_dangerous(tool_name: str, args: dict, config: dict) -> tuple[bool, str]:
             r"\bmkfs\b",
             r"\bdd\s+if=",
             r":\(\)\s*\{\s*:\|:&\s*\};:",
+            # Windows 专用危险指令 (CMD / PowerShell)
+            r"\bdel\s+",
+            r"\brd\s+",
+            r"\bRemove-Item\b",
+            r"\bformat\s+[A-Za-z]:",
+            r"\bdiskpart\b",
+            # 系统关机与数据库破坏
             r"\b(shutdown|reboot|init\s+0)\b",
             r"\bkill\s+-9\s+-1\b",
             r"\b(drop|truncate)\s+(database|table)\b",
@@ -70,15 +78,19 @@ def is_dangerous(tool_name: str, args: dict, config: dict) -> tuple[bool, str]:
 
         # 检查常规关键词列表
         for pattern in config.get("dangerous_patterns", []):
-            if pattern in cmd:
+            if pattern.lower() in cmd.lower():
                 return True, f"命令行包含高危模式: '{pattern}' (cmd: {cmd})"
 
     # 2. 检查危险的写操作（如覆盖敏感系统文件）
     if tool_name in ("write_to_file", "replace_file_content"):
         target_file = args.get("TargetFile", "")
-        # 禁止覆写系统关键配置
+        norm_file = target_file.lower().replace("/", "\\")
+        # Unix 保护目录
         if target_file.startswith(("/etc", "/bin", "/sbin", "/usr/bin", "/System", "/Library")):
             return True, f"目标路径触及系统保护目录: '{target_file}'"
+        # Windows 保护目录
+        if norm_file.startswith(("c:\\windows", "c:\\program files", "\\windows\\system32")):
+            return True, f"目标路径触及 Windows 系统保护目录: '{target_file}'"
 
     return False, ""
 

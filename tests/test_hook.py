@@ -139,6 +139,62 @@ def test_git_push_allowed():
     print("  ✓ 非破坏性指令放行测试通过 (git push -> allow)")
 
 
+def test_windows_del_blocked():
+    """测试 Windows 原生删除指令 del 均被拦截"""
+    payload = {
+        "toolCall": {
+            "name": "run_command",
+            "args": {"CommandLine": "del /f /s /q temp.txt"},
+        },
+        "stepIdx": 9,
+    }
+    result = run_handler_with_payload(payload)
+    assert result.get("decision") == "ask", f"del 指令应当保留人工确认，实际输出: {result}"
+    print("  ✓ Windows del 删除拦截测试通过 (del /f /s /q -> ask)")
+
+
+def test_windows_rd_blocked():
+    """测试 Windows 原生目录删除 rd /s 均被拦截"""
+    payload = {
+        "toolCall": {
+            "name": "run_command",
+            "args": {"CommandLine": "rd /s /q ./dist"},
+        },
+        "stepIdx": 10,
+    }
+    result = run_handler_with_payload(payload)
+    assert result.get("decision") == "ask", f"rd /s 目录删除应当保留人工确认，实际输出: {result}"
+    print("  ✓ Windows rd 目录删除拦截测试通过 (rd /s /q -> ask)")
+
+
+def test_windows_remove_item_blocked():
+    """测试 PowerShell Remove-Item 破坏性删除指令被拦截"""
+    payload = {
+        "toolCall": {
+            "name": "run_command",
+            "args": {"CommandLine": "Remove-Item -Recurse -Force ./data"},
+        },
+        "stepIdx": 11,
+    }
+    result = run_handler_with_payload(payload)
+    assert result.get("decision") == "ask", f"Remove-Item 应当保留人工确认，实际输出: {result}"
+    print("  ✓ PowerShell Remove-Item 删除拦截测试通过 (Remove-Item -> ask)")
+
+
+def test_windows_system_path_blocked():
+    """测试 Windows 系统保护目录写操作拦截"""
+    payload = {
+        "toolCall": {
+            "name": "write_to_file",
+            "args": {"TargetFile": "C:\\Windows\\System32\\drivers\\etc\\hosts"},
+        },
+        "stepIdx": 12,
+    }
+    result = run_handler_with_payload(payload)
+    assert result.get("decision") == "ask", f"Windows 系统保护目录写入应当拦截，实际输出: {result}"
+    print("  ✓ Windows 系统关键目录写保护测试通过 (C:\\Windows\\... -> ask)")
+
+
 def run_all_tests():
     print("======== 开始执行 AntiEnter 核心逻辑自测试 ========")
     test_safe_command_allowed()
@@ -146,6 +202,10 @@ def run_all_tests():
     test_rm_rf_any_directory_blocked()
     test_rm_file_blocked()
     test_git_push_allowed()
+    test_windows_del_blocked()
+    test_windows_rd_blocked()
+    test_windows_remove_item_blocked()
+    test_windows_system_path_blocked()
     test_forkbomb_blocked()
     test_safe_file_write_allowed()
     test_system_file_write_blocked()

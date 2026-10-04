@@ -12,8 +12,12 @@ GLOBAL_HOOKS_FILE = GLOBAL_CONFIG_DIR / "hooks.json"
 
 
 def get_hook_definition(handler_path: str = None) -> dict:
+    import sys
     if handler_path is None:
         handler_path = str(Path(__file__).resolve().parent / "hook_handler.py")
+
+    py_bin = "python" if sys.platform == "win32" else "python3"
+    escaped_path = handler_path.replace("\\", "/")
 
     return {
         "enabled": True,
@@ -23,7 +27,7 @@ def get_hook_definition(handler_path: str = None) -> dict:
                 "hooks": [
                     {
                         "type": "command",
-                        "command": f"python3 {handler_path}",
+                        "command": f'{py_bin} "{escaped_path}"',
                         "timeout": 15,
                     }
                 ],

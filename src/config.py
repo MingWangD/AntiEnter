@@ -17,6 +17,7 @@ DEFAULT_CONFIG = {
     # 高危指令熔断黑名单：匹配到这些模式时不自动放行，保留人工弹窗审批
     "safety_fuse_enabled": True,
     "dangerous_patterns": [
+        # Unix / Git / 通用删除
         "rm -rf",
         "rm -r",
         "rm -f",
@@ -24,6 +25,16 @@ DEFAULT_CONFIG = {
         "rmdir",
         "git reset --hard",
         "git clean -f",
+        # Windows 原生删除与磁盘危险操作
+        "del /s",
+        "del /f",
+        "del /q",
+        "rd /s",
+        "rmdir /s",
+        "Remove-Item",
+        "format ",
+        "diskpart",
+        # 破坏性命令与格式化
         "mkfs",
         "dd if=",
         ":(){ :|:& };:",
@@ -43,7 +54,7 @@ DEFAULT_CONFIG = {
         "Code",
         "Cursor",
     ],
-    # CLI 终端应用受支持的名称
+    # CLI 终端应用受支持的名称（macOS + Windows）
     "terminal_targets": [
         "Terminal",
         "iTerm2",
@@ -52,6 +63,12 @@ DEFAULT_CONFIG = {
         "kitty",
         "Alacritty",
         "WezTerm",
+        "cmd.exe",
+        "powershell.exe",
+        "pwsh.exe",
+        "WindowsTerminal.exe",
+        "Windows Terminal",
+        "ConEmu",
     ],
     # CLI 终端提示匹配关键词（正则或子串）
     "cli_prompt_patterns": [

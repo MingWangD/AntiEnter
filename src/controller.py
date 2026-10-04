@@ -79,13 +79,18 @@ def start(foreground: bool = False) -> bool:
     else:
         print("  ✗ 协议层 Hook 安装失败，仅依赖 UI 监听。")
 
-    # 2. 检查守护进程二进制
-    if not DAEMON_BIN.exists():
-        if not build_daemon():
-            return False
+    # 2. 检查并准备守护进程启动命令
+    if sys.platform == "win32":
+        daemon_cmd = [sys.executable, str(ROOT_DIR / "src" / "windows_daemon.py")]
+    else:
+        if not DAEMON_BIN.exists():
+            if not build_daemon():
+                return False
+        daemon_cmd = [str(DAEMON_BIN)]
 
     # 3. 启动 UI 守护进程
-    print("[AntiEnter] 2/2 正在启动 macOS UI 自动回车守护进程...")
+    os_name = "Windows" if sys.platform == "win32" else "macOS"
+    print(f"[AntiEnter] 2/2 正在启动 {os_name} UI 自动回车守护进程...")
     pid_file = Path(config.get("pid_file"))
     pid_file.parent.mkdir(parents=True, exist_ok=True)
     log_file = config.get("log_file")
@@ -93,17 +98,22 @@ def start(foreground: bool = False) -> bool:
     if foreground:
         print("[AntiEnter] 前台运行模式，按 Ctrl+C 退出。")
         try:
-            subprocess.run([str(DAEMON_BIN)])
+            subprocess.run(daemon_cmd)
         except KeyboardInterrupt:
             stop()
         return True
 
+    creation_flags = 0
+    if sys.platform == "win32":
+        creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+
     with open(log_file, "a", encoding="utf-8") as out:
         proc = subprocess.Popen(
-            [str(DAEMON_BIN)],
+            daemon_cmd,
             stdout=out,
             stderr=out,
-            start_new_session=True,
+            start_new_session=(sys.platform != "win32"),
+            creationflags=creation_flags if sys.platform == "win32" else 0,
         )
 
     pid_file.write_text(str(proc.pid))
@@ -112,6 +122,7 @@ def start(foreground: bool = False) -> bool:
     if proc.poll() is None:
         print(f"  ✓ UI 自动回车守护进程已启动 (PID: {proc.pid})。")
         print("\n[AntiEnter 状态] 🟢 已全面激活！")
+        print(f"  - 平台: {os_name}")
         print(f"  - 模式: 桌面端 + CLI 双端全自动")
         print(f"  - 回车缓冲: {config.get('buffer_delay')} 秒")
         print(f"  - 提示音: {'开启' if config.get('play_sound') else '关闭'}")
@@ -129,9 +140,12 @@ def stop() -> bool:
     pid = get_running_pid()
     if pid is not None:
         try:
-            os.kill(pid, signal.SIGTERM)
+            if sys.platform == "win32":
+                subprocess.run(["taskkill", "/F", "/PID", str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                os.kill(pid, signal.SIGTERM)
             print(f"  ✓ 已终止 UI 守护进程 (PID: {pid})。")
-        except ProcessLookupError:
+        except (ProcessLookupError, OSError):
             pass
         config = load_config()
         pid_file = Path(config.get("pid_file"))
