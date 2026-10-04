@@ -3,15 +3,14 @@ from __future__ import annotations
 AntiEnter CLI PTY 智能交互包装器
 用于包装 Antigravity CLI (agy) 或任何交互式终端指令。
 在终端检测到等待确认提示时，自动在 1.0s 缓冲后注入 Return (\n)。
+若开启高危熔断且命令为高危指令，则保持人工确认，不自动注入。
+Windows 平台暂不支持 PTY 模式。
 """
 import sys
 import os
-import pty
-import select
-import tty
-import termios
 import re
 import time
+import subprocess
 from pathlib import Path
 from typing import List
 
@@ -23,14 +22,34 @@ sys.path.insert(0, str(_current_dir.parent.parent))
 try:
     from src.config import load_config
     from src.sound import play_cue_async
+    from src.hook_handler import is_dangerous
 except ImportError:
     from config import load_config
     from sound import play_cue_async
+    from hook_handler import is_dangerous
 
 
-def run_with_pty(cmd_args: list[str]):
-    """使用 PTY 运行 CLI 命令并监控输出提示"""
+def run_with_pty(cmd_args: list[str]) -> int:
+    """使用 PTY 运行 CLI 命令并监控输出提示（Unix 专属）"""
+    if sys.platform == "win32":
+        sys.stderr.write("错误: Windows 平台暂不支持 PTY 终端交互包装器 (wrap 命令)。\n")
+        return 1
+
+    import pty
+    import select
+    import tty
+    import termios
+
     config = load_config()
+    if not config.get("enabled", True):
+        # AntiEnter 已暂停，直接透传运行，杜绝 shell 注入
+        return subprocess.run(cmd_args, check=False).returncode
+
+    # 检查被包装的命令本身是否为高危命令
+    full_cmd = " ".join(cmd_args)
+    fuse_active = config.get("safety_fuse_enabled", True)
+    cmd_dangerous, reason = is_dangerous("run_command", {"CommandLine": full_cmd}, config)
+
     buffer_delay = config.get("buffer_delay", 1.0)
     prompt_patterns = [
         re.compile(p, re.IGNORECASE)
@@ -53,7 +72,7 @@ def run_with_pty(cmd_args: list[str]):
             os.execvp(cmd_args[0], cmd_args)
         except Exception as e:
             sys.stderr.write(f"执行命令失败 {cmd_args}: {e}\n")
-            sys.exit(1)
+            sys.exit(127)
 
     # 父进程
     os.close(slave_fd)
@@ -98,34 +117,26 @@ def run_with_pty(cmd_args: list[str]):
 
                     # 检查是否匹配提示
                     now = time.time()
-                    if now - last_trigger_time > cooldown:
-                        tail = output_buffer[-300:]
-                        matched = any(pattern.search(tail) for pattern in prompt_patterns)
-                        if matched:
-                            play_cue_async()
-                            time.sleep(buffer_delay)
-                            # 发送回车
-                            os.write(master_fd, b"\n")
-                            last_trigger_time = time.time()
-                            output_buffer = ""
+                    if (now - last_trigger_time) > cooldown:
+                        # 若开启熔断且当前命令是高危指令，不自动注入
+                        if not (fuse_active and cmd_dangerous):
+                            if any(p.search(output_buffer) for p in prompt_patterns):
+                                play_cue_async()
+                                time.sleep(buffer_delay)
+                                os.write(master_fd, b"\n")
+                                last_trigger_time = time.time()
+                                output_buffer = ""
                 except OSError:
                     break
+
     finally:
-        if old_term_settings:
+        if old_term_settings is not None:
             try:
                 termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, old_term_settings)
             except Exception:
                 pass
-        try:
-            os.close(master_fd)
-            _, status = os.waitpid(pid, 0)
-            sys.exit(os.waitstatus_to_exitcode(status))
-        except Exception:
-            sys.exit(0)
+        os.close(master_fd)
 
-
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python3 cli_runner.py <command> [args...]")
-        sys.exit(1)
-    run_with_pty(sys.argv[1:])
+    _, status = os.waitpid(pid, 0)
+    exit_code = os.waitstatus_to_exitcode(status) if hasattr(os, "waitstatus_to_exitcode") else (status >> 8)
+    return exit_code

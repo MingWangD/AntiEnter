@@ -6,15 +6,38 @@ cd "$DIR"
 
 echo "=== 开始构建 AntiEnter.app macOS 应用程序 ==="
 
+# 校验单一版本清单
+if [ ! -f "version.json" ]; then
+    echo "错误: 根目录缺少 version.json 版本清单文件"
+    exit 1
+fi
+
+PYTHON_BIN="/usr/bin/python3"
+if [ ! -x "$PYTHON_BIN" ]; then
+    PYTHON_BIN="python3"
+fi
+
+MANIFEST_VERSION=$($PYTHON_BIN -c "import json; print(json.load(open('version.json'))['version'].strip())")
+if [ -n "$1" ] && [ "$1" != "$MANIFEST_VERSION" ]; then
+    echo "错误: 命令行参数版本 ($1) 与 version.json ($MANIFEST_VERSION) 不一致！"
+    exit 1
+fi
+VERSION="$MANIFEST_VERSION"
+
+# 校验默认音效资产
+if [ ! -f "assets/sounds/codex-notification.wav" ]; then
+    echo "错误: 缺少必需音效资产 assets/sounds/codex-notification.wav，构建中止"
+    exit 1
+fi
+
 # 准备构建目录
 APP_BUNDLE="dist/AntiEnter.app"
 CONTENTS="$APP_BUNDLE/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
 CACHE_DIR="$DIR/.cache"
-VERSION="${1:-1.2.0}"
 
-rm -rf "$APP_BUNDLE" dist/*.zip dist/*.dmg
+rm -rf "$APP_BUNDLE" dist/*.dmg
 mkdir -p "$MACOS" "$RESOURCES/scripts" "$CACHE_DIR"
 
 # 1. 生成高分辨率应用图标
@@ -40,7 +63,7 @@ iconutil -c icns "$ICONSET" -o "$RESOURCES/AppIcon.icns"
 echo "  ✓ 图标打包完成: $RESOURCES/AppIcon.icns"
 
 # 2. 编译 Swift 可执行程序
-echo "[2/5] 编译 Swift 菜单栏原生应用..."
+echo "[2/5] 编译 Swift 菜单栏原生应用 (v${VERSION})..."
 swiftc -O -module-cache-path "$CACHE_DIR" \
     src/app/main.swift \
     -o "$MACOS/AntiEnter"
@@ -51,16 +74,14 @@ echo "  ✓ 二进制生成完成: $MACOS/AntiEnter"
 # 3. 复制依赖脚本与模板
 echo "[3/5] 打包嵌入 Python 脚本与配置模板..."
 mkdir -p "$RESOURCES/scripts/src"
-cp src/hook_handler.py "$RESOURCES/scripts/"
-cp src/config.py "$RESOURCES/scripts/"
-cp src/sound.py "$RESOURCES/scripts/"
-cp src/cli_runner.py "$RESOURCES/scripts/"
+cp src/*.py "$RESOURCES/scripts/"
 cp src/*.py "$RESOURCES/scripts/src/"
 cp hooks/hooks.json "$RESOURCES/"
+cp version.json "$RESOURCES/"
+cp version.json "$RESOURCES/scripts/"
 mkdir -p "$RESOURCES/sounds"
-cp -R assets/sounds/* "$RESOURCES/sounds/" 2>/dev/null || true
+cp -R assets/sounds/* "$RESOURCES/sounds/"
 chmod +x "$RESOURCES/scripts/hook_handler.py"
-chmod +x "$RESOURCES/scripts/src/hook_handler.py"
 
 # 4. 写入 Info.plist 与 PkgInfo
 echo "[4/5] 写入 macOS Bundle 元数据 (Info.plist)..."
@@ -111,4 +132,4 @@ echo ""
 echo "=== 构建成功！==="
 echo "应用包路径: $DIR/dist/AntiEnter.app"
 echo "发布包路径: $DIR/dist/AntiEnter-v${VERSION}-macOS.zip"
-ls -lh dist/
+ls -lh dist/AntiEnter-v${VERSION}-macOS.zip

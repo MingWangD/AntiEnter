@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
 AntiEnter CLI 主程序
+提供守护进程生命周期控制、PTY 包装器、配置修改与更新入口。
+所有子命令执行结果忠实反映为进程退出码。
 """
+from __future__ import annotations
 import sys
 import os
 import argparse
@@ -11,8 +14,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 from src.controller import start, stop, status, build_daemon
-from src.cli_runner import run_with_pty
-from src.config import load_config, save_config
+from src.config import load_config, save_config, update_config, advance_generation
 
 
 def main():
@@ -36,7 +38,9 @@ def main():
     p_cfg = subparsers.add_parser("config", help="查看或修改配置")
     p_cfg.add_argument("--delay", type=float, help="设置缓冲延时 (秒，如 1.0)")
     p_cfg.add_argument("--sound", choices=["on", "off"], help="开启或关闭提示音")
+    p_cfg.add_argument("--theme", choices=["codex-notification", "tink", "pop", "ping", "glass", "hero", "sosumi"], help="设置提示音主题")
     p_cfg.add_argument("--fuse", choices=["on", "off"], help="开启或关闭高危指令安全熔断")
+    p_cfg.add_argument("--enabled", choices=["on", "off"], help="开启或暂停自动确认动作")
 
     subparsers.add_parser("test", help="运行功能与熔断自检")
     p_update = subparsers.add_parser("update", help="检查并自动更新 AntiEnter 至最新版本")
@@ -45,50 +49,75 @@ def main():
     args = parser.parse_args()
 
     if args.command == "start":
-        start(foreground=args.foreground)
+        ok = start(foreground=args.foreground)
+        sys.exit(0 if ok else 1)
     elif args.command == "stop":
-        stop()
+        ok = stop()
+        sys.exit(0 if ok else 1)
     elif args.command == "status":
-        status()
+        code = status()
+        sys.exit(code)
     elif args.command == "run":
-        start(foreground=True)
+        ok = start(foreground=True)
+        sys.exit(0 if ok else 1)
     elif args.command == "build":
-        build_daemon()
+        ok = build_daemon()
+        sys.exit(0 if ok else 1)
     elif args.command == "wrap":
         if not args.cmd:
             print("错误: 请指定要运行的命令，例如: antienter wrap agy")
             sys.exit(1)
-        run_with_pty(args.cmd)
+        from src.cli_runner import run_with_pty
+        code = run_with_pty(args.cmd)
+        sys.exit(code)
     elif args.command == "config":
-        cfg = load_config()
-        changed = False
+        updates = {}
+        msg_list: list[str] = []
         if args.delay is not None:
-            cfg["buffer_delay"] = args.delay
-            changed = True
-            print(f"[配置] 缓冲延时已更新为: {args.delay} 秒")
+            updates["buffer_delay"] = args.delay
+            msg_list.append(f"[配置] 缓冲延时已更新为: {args.delay} 秒")
         if args.sound is not None:
-            cfg["play_sound"] = (args.sound == "on")
-            changed = True
-            print(f"[配置] 提示音已更新为: {args.sound}")
+            updates["play_sound"] = (args.sound == "on")
+            msg_list.append(f"[配置] 提示音已更新为: {args.sound}")
+        if args.theme is not None:
+            updates["sound_theme"] = args.theme
+            msg_list.append(f"[配置] 提示音主题已更新为: {args.theme}")
         if args.fuse is not None:
-            cfg["safety_fuse_enabled"] = (args.fuse == "on")
-            changed = True
-            print(f"[配置] 高危熔断已更新为: {args.fuse}")
-        if changed:
-            save_config(cfg)
+            updates["safety_fuse_enabled"] = (args.fuse == "on")
+            msg_list.append(f"[配置] 高危熔断已更新为: {args.fuse}")
+        if args.enabled is not None:
+            updates["enabled"] = (args.enabled == "on")
+            gen = advance_generation()
+            if gen == -1:
+                sys.stderr.write("错误: 递增代次失败，修改未生效！\n")
+                sys.exit(1)
+            msg_list.append(f"[配置] 全局自动确认状态已更新为: {args.enabled}")
+
+        if updates:
+            saved = update_config(updates)
+            if saved is None:
+                sys.stderr.write("错误: 保存配置失败，修改未生效！\n")
+                sys.exit(1)
+            for m in msg_list:
+                print(m)
         else:
+            cfg = load_config()
             print("当前配置:")
             for k, v in cfg.items():
                 print(f"  {k}: {v}")
+        sys.exit(0)
     elif args.command == "test":
         import subprocess
         test_file = ROOT_DIR / "tests" / "test_hook.py"
-        subprocess.run(["python3", str(test_file)])
+        res = subprocess.run([sys.executable, "-m", "unittest", "discover", "tests"])
+        sys.exit(res.returncode)
     elif args.command == "update":
         from src.updater import check_and_update
-        check_and_update(gui=(not args.cli))
+        ok = check_and_update(gui=(not args.cli))
+        sys.exit(0 if ok else 1)
     else:
         parser.print_help()
+        sys.exit(0)
 
 
 if __name__ == "__main__":
