@@ -20,18 +20,16 @@ struct Config {
         "Alacritty"
     ]
     static var confirmButtonKeywords: [String] = [
+        "Submit ↵",
+        "Yes, allow this time",
+        "Yes, and always allow",
+        "Always allow",
+        "Allow this time",
         "Proceed",
-        "Allow",
-        "Run",
-        "Submit",
-        "Continue",
         "Confirm",
-        "Yes",
-        "OK",
         "确定",
         "允许",
-        "继续",
-        "执行"
+        "好"
     ]
 }
 
@@ -175,6 +173,7 @@ class DaemonEngine {
         
         let appElement = AXUIElementCreateApplication(frontApp.processIdentifier)
         if AccessibilityChecker.hasConfirmationDialog(appElement: appElement) {
+            lastTriggerTime = now // 立即锁定触发时间，避免轮询重复触发
             print("[AntiEnter] 检测到 [\(appName)] 中存在等待确认的对话框/按钮，开始 \(Config.bufferDelay)s 缓冲倒计时...")
             playAudioCue()
             

@@ -29,9 +29,10 @@ class AppState {
         "Alacritty"
     ]
     
+    // 精准匹配确认授权弹窗关键词，排除 IDE 常驻按钮 (如 Run/Submit/Continue)
     let confirmKeywords: [String] = [
-        "Proceed", "Allow", "Run", "Submit", "Continue", "Confirm", "Yes", "OK",
-        "确定", "允许", "继续", "执行", "好"
+        "Submit ↵", "Yes, allow this time", "Yes, and always allow", "Always allow",
+        "Allow this time", "Proceed", "Confirm", "确定", "允许", "好"
     ]
     
     var configDir: URL {
@@ -649,6 +650,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         
         let appElement = AXUIElementCreateApplication(frontApp.processIdentifier)
         if AccessibilityService.hasConfirmationDialog(appElement: appElement) {
+            AppState.shared.lastTriggerTime = now // 立即锁定触发时间，防止 0.5s 轮询重复触发
             AppState.shared.log("检测到 [\(appName)] 等待确认界面，开始 \(AppState.shared.bufferDelay)s 缓冲倒计时...")
             AppState.shared.playCueSound()
             
