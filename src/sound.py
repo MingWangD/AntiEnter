@@ -16,16 +16,32 @@ def play_cue_async():
 
     def _play():
         import sys
+        theme = config.get("sound_theme", "tink").lower()
+        
         if sys.platform == "win32":
             try:
                 import winsound
-                winsound.MessageBeep(winsound.MB_ICONASTERISK)
+                # Windows 音效映射
+                win_map = {
+                    "tink": winsound.MB_ICONASTERISK,
+                    "pop": winsound.MB_OK,
+                    "ping": winsound.MB_ICONEXCLAMATION,
+                    "glass": winsound.MB_ICONHAND
+                }
+                winsound.MessageBeep(win_map.get(theme, winsound.MB_ICONASTERISK))
             except Exception:
                 pass
             return
 
-        # macOS / Unix
-        sound_file = config.get("sound_file", "/System/Library/Sounds/Tink.aiff")
+        # macOS / Unix 音效映射
+        mac_map = {
+            "tink": "/System/Library/Sounds/Tink.aiff",
+            "pop": "/System/Library/Sounds/Pop.aiff",
+            "ping": "/System/Library/Sounds/Ping.aiff",
+            "glass": "/System/Library/Sounds/Glass.aiff"
+        }
+        sound_file = mac_map.get(theme, mac_map["tink"])
+        
         if os.path.exists(sound_file):
             try:
                 subprocess.run(

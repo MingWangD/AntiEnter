@@ -12,8 +12,8 @@ DEFAULT_CONFIG = {
     "buffer_delay": 1.0,
     # 触发自动回车时是否播放系统提示音
     "play_sound": True,
-    # 提示音路径（macOS 经典音效）
-    "sound_file": "/System/Library/Sounds/Tink.aiff",
+    # 提示音主题：可选 "tink", "pop", "ping", "glass"
+    "sound_theme": "tink",
     # 高危指令熔断黑名单：匹配到这些模式时不自动放行，保留人工弹窗审批
     "safety_fuse_enabled": True,
     "dangerous_patterns": [
